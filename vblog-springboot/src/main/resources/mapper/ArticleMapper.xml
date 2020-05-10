@@ -1,0 +1,258 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zsm.springboot.dao.ArticleDao">
+
+    <!-- 添加文章 -->
+    <insert id="addArticle" parameterType="Article" keyProperty="aid" useGeneratedKeys="true">
+        INSERT INTO `blog`.`article`(`title`, `summary`, `md_content`, `html_content`, `a_state`, `aprivate`, `create_date`, `publish_date`, `order_time`, `adel_time`, `adel`, `a_uid`, `a_category`)
+        VALUES (#{title}, #{summary}, #{mdContent}, #{htmlContent}, #{aState}, #{aprivate}, #{createDate}, #{publishDate}, #{orderTime}, #{adelTime}, #{adel}, #{aUid}, #{aCategory});
+    </insert>
+
+    <!-- 查询文章列表返回结果集 -->
+    <resultMap id="getArticleMap" type="Article">
+        <id property="aid" column="aid"></id>
+        <result property="title" column="title"></result>
+        <result property="summary" column="summary"></result>
+        <result property="aprivate" column="aprivate"></result>
+        <result property="publishDate" column="publish_date"></result>
+        <!-- 一对一查询 -->
+        <association property="user" javaType="User">
+            <id property="uid" column="uid"></id>
+            <result property="unickname" column="unickname"></result>
+            <result property="uroles" column="uroles"></result>
+        </association>
+        <association property="category" javaType="Category">
+            <id property="cid" column="cid"></id>
+            <result property="category" column="category"></result>
+        </association>
+        <!-- 一对多查询-->
+        <collection property="tags" column="aid" javaType="List" select="selectTags" ofType="Tag">
+            <result property="tag" column="tag"/>
+            <result property="aTag" column="a_tag"></result>
+        </collection>
+    </resultMap>
+    <!-- 查询所有文章(发布文章) --><!-- 查询用户自己发布的文章
+     SELECT `u`.`uid`, `u`.`unickname`,
+        `a`.`aid`, `a`.`title`, `a`.`summary`, `a`.`publish_date`,
+        `t`.`tid`, `t`.`tag`,
+        `c`.`cid`, `c`.`category`
+        FROM `blog`.`user` `u`
+        LEFT JOIN `blog`.`article` `a` ON `a`.`a_uid` = `u`.`uid`
+        LEFT JOIN `blog`.`tag` `t` ON `a`.`aid` = `t`.`a_tag`
+        LEFT JOIN `blog`.`category` `c` ON `a`.`a_category` = `c`.`cid`
+        默认必须添加 标签 和 类型
+    -->
+
+    <select id="selectTags" resultType="Tag">
+        SELECT `t`.`tid`, `t`.`tag`, `t`.`a_tag`
+        FROM `blog`.`tag` `t`
+        WHERE `t`.`t_del` = 1
+        AND `t`.`a_tag` = #{aid}
+    </select>
+
+    <select id="getAllArticles" parameterType="User" resultMap="getArticleMap">
+        SELECT `a`.*, `u`.*, `c`.*
+        FROM `blog`.`article` `a`, `blog`.`user` `u`, `blog`.`category` `c`
+        WHERE `a`.`adel` = 1
+        AND `u`.`udel` = 1
+        AND `a`.`a_uid` = `u`.`uid`
+        AND `a`.`a_category` = `c`.`cid`
+        -- 查询 已发布、草稿箱、回收站 中的文章
+        AND `a`.`a_state` = #{aState}
+        -- 查询个人用户文章还是所有用户文章
+        <if test="uid != null and uid != '' ">
+            AND `u`.`uid` = #{uid}
+        </if>
+        -- 如果没有uid,且不是超级管理员，只能查看公开文章
+        <if test="uid == null and uroles != 3 ">
+            AND `a`.`aprivate` = 2
+        </if>
+        <if test="uid == '' and uroles != 3 ">
+            AND `a`.`aprivate` = 2
+        </if>
+        -- 根据用户昵称搜索发表的文章
+        <if test="unickname != null and unickname != '' ">
+            AND `u`.`unickname` LIKE '%${unickname}%'
+        </if>
+        -- 根据文章类型搜索发表的文章
+        <if test="category != null and category != '' ">
+            AND `c`.`category` LIKE '%${category}%'
+        </if>
+        -- 根据文章标题搜索发表的文章
+        <if test="title != null and title != '' ">
+            AND `a`.`title` LIKE CONCAT('%',#{title,jdbcType=VARCHAR},'%')
+        </if>
+        ORDER By `a`.`order_time` DESC
+    </select>
+
+    <!-- 查询草稿箱中的文章 -->
+    <select id="getArticleByDraft" resultMap="getArticleMap">
+        SELECT u.*, a.*, t.*, c.*
+        FROM `blog`.`user` `u`, `blog`.`article` `a`, `blog`.`tag` `t`, `blog`.`category` `c`
+        WHERE `u`.`udel` = 1
+        AND `a`.`adel` = 1
+        AND `a`.`a_state` = 0
+        AND `a`.`aid` = `t`.`a_tag`
+        AND `a`.`a_category` = `c`.`cid`
+        AND `a`.`a_uid` = `u`.`uid`
+        AND `u`.`uid` = #{uid}
+        AND `t`.`t_del` = 1
+        -- 根据文章类型搜索发表的文章
+        <if test="category != null and category != '' ">
+            AND `c`.`category` LIKE '%${category}%'
+        </if>
+        -- 根据文章标题搜索发表的文章
+        <if test="title != null and title != '' ">
+            AND `a`.`title` LIKE CONCAT('%',#{title,jdbcType=VARCHAR},'%')
+        </if>
+        ORDER By `a`.`orderTime` DESC
+    </select>
+
+    <!-- 查询回收站中的文章，可能后续添加 -->
+    <select id="getArticleByRecycle" resultMap="getArticleMap">
+        SELECT u.*, a.*, t.*, c.*
+        FROM `blog`.`user` `u`, `blog`.`article` `a`, `blog`.`tag` `t`, `blog`.`category` `c`
+        WHERE `u`.`udel` = 1
+        AND `a`.`adel` = 1
+        AND `a`.`a_state` = -1
+        AND `a`.`aid` = `t`.`a_tag`
+        AND `a`.`a_category` = `c`.`cid`
+        AND `a`.`a_uid` = `u`.`uid`
+        AND `u`.`uid` = #{uid}
+        AND `t`.`t_del` = 1
+        -- 根据文章类型搜索发表的文章
+        <if test="category != null and category != '' ">
+            AND `c`.`category` LIKE '%${category}%'
+        </if>
+        -- 根据文章标题搜索发表的文章
+        <if test="title != null and title != '' ">
+            AND `a`.`title` LIKE CONCAT('%',#{title,jdbcType=VARCHAR},'%')
+        </if>
+        ORDER By `a`.`orderTime` DESC
+    </select>
+
+    <!-- 根据id获取当前文章，返回结果集 -->
+    <resultMap id="getArticleByIdMap" type="Article">
+        <id property="aid" column="aid"></id>
+        <result property="title" column="title"></result>
+        <result property="mdContent" column="md_content"></result>
+        <result property="htmlContent" column="html_content"></result>
+        <result property="aState" column="a_state"></result>
+        <result property="aprivate" column="aprivate"></result>
+        <result property="createDate" column="create_date"></result>
+        <result property="publishDate" column="publish_date"></result>
+        <result property="aUid" column="a_uid"></result>
+        <result property="aCategory" column="a_category"></result>
+        <!-- 多对一查询 -->
+        <association property="user" javaType="User">
+            <id property="uid" column="uid"></id>
+            <result property="umail" column="umail"></result>
+            <result property="unickname" column="unickname"></result>
+            <result property="uintroduce" column="uintroduce"></result>
+            <result property="uavatar" column="uavatar"></result>
+            <result property="uroles" column="uroles"></result>
+        </association>
+        <collection property="tags" ofType="Tag">
+            <id property="tid" column="tid"></id>
+            <result property="tag" column="tag"></result>
+        </collection>
+        <collection property="category" ofType="Category">
+            <id property="cid" column="cid"></id>
+            <result property="category" column="category"></result>
+        </collection>
+    </resultMap>
+    <!-- SELECT `u`.*, `a`.*, `t`.*, `c`.*
+        FROM `blog`.`article` `a`
+        LEFT JOIN `blog`.`user` `u` ON `u`.`uid` = `a`.`a_uid`
+        LEFT JOIN `blog`.`tag` `t` ON `t`.`a_tag` = `a`.`aid`
+        LEFT JOIN `blog`.`category` `c` ON `c`.`cid` = `a`.`a_category`
+        -->
+    <select id="getArticleById" resultMap="getArticleByIdMap" parameterType="Integer">
+        SELECT u.*, a.*, t.*, c.*
+        FROM `blog`.`user` `u`, `blog`.`article` `a`, `blog`.`tag` `t`, `blog`.`category` `c`
+        WHERE `a`.`aid` = #{aid}
+        AND `u`.`udel` = 1
+        AND `a`.`adel` = 1
+        AND `t`.`t_del` = 1
+        AND `a`.`aid` = `t`.`a_tag`
+        AND `a`.`a_category` = `c`.`cid`
+        AND `a`.`a_uid` = `u`.`uid`
+    </select>
+<!--    UPDATE `blog`.`article`
+SET `title` = '1', `summary` = 's', `md_content` = 's1',
+`html_content` = '1', `a_state` = 1, `create_date` = '1', `publish_date` = '1',
+`order_time` = 1, `adel_time` = '1', `adel` = 1, `a_uid` = 1, `a_category` = 1 WHERE `aid` = 1;
+-->
+    <!-- 根据文章id修改当前文章 -->
+    <update id="updateArticleById" parameterType="Article" >
+        UPDATE `blog`.`article`
+        SET `title` = #{title}, `summary` = #{summary}, `md_content` = #{mdContent},
+        `html_content` = #{htmlContent}, `a_state` = #{aState}, `aprivate` = #{aprivate}, `publish_date` = #{publishDate},
+        `order_time` = #{orderTime}, `a_category` = #{aCategory}
+        WHERE `aid` = #{aid}
+    </update>
+
+    <!-- 根据文章id
+        1. 删除当前文章，删除到回收站中，修改a_state
+        2. 从回收站中恢复
+        3. 从草稿箱中直接发布
+    -->
+    <update id="delUpArticleStateById" parameterType="Article" >
+        UPDATE `blog`.`article`
+        SET `a_state` = #{aState}
+        WHERE `aid` = #{aid}
+    </update>
+
+    <!-- 根据用户 uid 查询
+            1. 已发布的博客的数量
+            2. 私密文章的数量
+            3. 草稿箱中的数量
+            4. 远程回收站的数量
+     -->
+    <select id="getAllArticlesCount" parameterType="Integer" resultType="Integer">
+        SELECT COUNT(*)
+        FROM `blog`.`article`
+        WHERE `a_uid` = #{uid}
+        AND `a_state` = 1
+        AND `aprivate` = 2
+        AND `adel` = 1
+    </select>
+    <select id="getPriArticlesCount" parameterType="Integer" resultType="Integer">
+        SELECT COUNT(*)
+        FROM `blog`.`article`
+        WHERE `a_uid` = #{uid}
+        AND `aprivate` = 1
+        AND `adel` = 1
+    </select>
+    <select id="getDraArticlesCount" parameterType="Integer" resultType="Integer">
+        SELECT COUNT(*)
+        FROM `blog`.`article`
+        WHERE `a_uid` = #{uid}
+        AND `a_state` = 2
+        AND `adel` = 1
+    </select>
+    <select id="getRecArticlesCount" parameterType="Integer" resultType="Integer">
+        SELECT COUNT(*)
+        FROM `blog`.`article`
+        WHERE `a_uid` = #{uid}
+        AND `a_state` = 3
+        AND `adel` = 1
+    </select>
+
+    <!-- 根据文章id删除当前文章，彻底删除，修改udel, 记录删除时间 -->
+    <update id="delArticleById" >
+        UPDATE `blog`.`article`
+        SET `adel_time` = #{adelTime}, `adel` = 9
+        WHERE `aid` = #{aid}
+    </update>
+
+    <!-- 查询当前文章绑定的 类型  -->
+    <select id="checkArticleByCid" resultType="Article" parameterType="Integer">
+        SELECT `a`.`aid`
+        FROM `blog`.`article` `a`
+        WHERE `a_category` = #{cid}
+        AND `adel` = 1
+    </select>
+
+</mapper>

@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zsm.springboot.dao.UserDao">
+
+    <!-- 添加用户 -->
+    <insert id="addUser" parameterType="User" keyProperty="uid" useGeneratedKeys="true">
+        INSERT INTO `blog`.`user`(`umail`, `upassword`, `uname`, `unickname`, `uavatar`, `uphone`, `uintroduce`, `ucretime`, `uroles`, `udeltime`, `udel`, `ustatus`)
+        VALUES (#{umail}, #{upassword}, #{uname}, #{unickname}, #{uavatar}, #{uphone}, #{uintroduce}, #{ucretime}, #{uroles}, #{udeltime}, #{udel}, #{ustatus});
+    </insert>
+
+    <select id="getAllUsers" parameterType="User" resultType="User">
+        SELECT `u`.`uid`, `u`.`umail`, `u`.`uname`, `u`.`unickname`, `u`.`uavatar`, `u`.`uphone`,
+        `u`.`uintroduce`, `u`.`ucretime`, `u`.`uroles`, `u`.`udeltime`, `u`.`udel`, `u`.`ustatus`
+        FROM `blog`.`user` `u`
+        WHERE `u`.`ustatus` = 1
+        -- 管理员查询用户进行限制
+        <if test="uroles == 2">
+            AND `u`.`uroles` &lt;&gt; 3
+        </if>
+        -- 昵称查询
+        <if test="unickname != null and unickname != ''">
+            AND `u`.`unickname` LIKE '%${unickname}%'
+        </if>
+        -- 账号查询
+        <if test="umail != null and umail != ''">
+            AND `u`.`umail` LIKE '%${umail}%'
+        </if>
+        ORDER BY `u`.`ucretime` DESC
+    </select>
+
+    <!-- 登录使用，密码校验 -->
+    <select id="userByUmail" resultType="User" parameterType="String">
+        SELECT `u`.`uid`, `u`.`upassword`, `u`.`umail`, `u`.`uname`, `u`.`unickname`, `u`.`uavatar`, `u`.`uphone`,
+        `u`.`uintroduce`, `u`.`ucretime`, `u`.`uroles`
+        FROM `blog`.`user` `u`
+        WHERE `u`.`umail` = #{umail}
+        AND `u`.`udel` = 1
+        AND `u`.`ustatus` = 1
+    </select>
+
+    <!-- 添加用户时查看信息 -->
+    <select id="getUserBeforeAddByUmail" resultType="User" parameterType="String">
+        SELECT `u`.`udel`
+        FROM `blog`.`user` `u`
+        WHERE `u`.`umail` = #{umail}
+        AND `u`.`ustatus` = 1
+    </select>
+
+    <select id="getUserById" resultType="User" parameterType="Integer">
+        SELECT `u`.`uid`, `u`.`umail`, `u`.`uname`, `u`.`unickname`, `u`.`uavatar`, `u`.`uphone`,
+        `u`.`uintroduce`, `u`.`ucretime`, `u`.`uroles`, `u`.`ustatus`
+        FROM `blog`.`user` `u`
+        WHERE `u`.`uid` = #{uid}
+        AND `u`.`udel` = 1
+        AND `u`.`ustatus` = 1
+    </select>
+
+    <update id="upPasswordByUmail" parameterType="String">
+        UPDATE `blog`.`user` `u`
+        SET `upassword` = #{newPwd}
+        WHERE `umail` = #{umail}
+        AND `u`.`udel` = 1
+    </update>
+
+    <!-- 更新用户头像 -->
+    <update id="uploadAvatar">
+        UPDATE `blog`.`user` `u`
+        SET `u`.`uavatar` = #{imgUrl}
+        WHERE `u`.`uid` = #{uid}
+        AND `u`.`udel` = 1
+    </update>
+
+    <!-- 更新用户信息 -->
+    <update id="updateUser" parameterType="User" >
+        UPDATE `blog`.`user` `u`
+        SET `u`.`uname` = #{uname}, `u`.`unickname` = #{unickname}, `u`.`uphone` = #{uphone},
+        `u`.`uintroduce` = #{uintroduce}, `u`.`uroles` = #{uroles}
+        WHERE `u`.`uid` = #{uid}
+        <if test="uroles != 3">
+            AND `u`.`udel` = 1
+        </if>
+    </update>
+
+    <!-- 激活用户 -->
+    <update id="activeUser" parameterType="Integer" >
+        UPDATE `blog`.`user` `u`
+        SET `u`.`ustatus` = 1
+        WHERE `u`.`uid` = #{uid}
+    </update>
+
+    <!-- 忘记密码，用户重置密码 -->
+    <update id="resetPassword" parameterType="String" >
+        UPDATE `blog`.`user` `u`
+        SET `u`.`upassword` = #{upassword}
+        WHERE `u`.`umail` = #{umail}
+        AND `u`.`ustatus` = 1
+    </update>
+
+    <!-- 恢复用户, 更新信息 -->
+    <update id="recoverUser" parameterType="User" >
+        UPDATE `blog`.`user` `u`
+        SET `u`.`upassword` = #{upassword}, `u`.`uname` = #{uname}, `u`.`unickname` = #{unickname},
+        `u`.`uintroduce` = #{uintroduce}, `u`.`uroles` = #{uroles}, `u`.`udeltime` = #{udeltime}, `u`.`udel` = #{udel}
+        WHERE `u`.`umail` = #{umail}
+    </update>
+
+    <!-- 删除用户 -->
+    <update id="delUserByUmail" parameterType="User">
+        UPDATE `blog`.`user`
+        SET `udeltime` = #{udeltime}, `udel` = 9
+        WHERE `umail` = #{umail}
+    </update>
+
+</mapper>

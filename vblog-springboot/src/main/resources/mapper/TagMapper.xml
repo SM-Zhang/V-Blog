@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zsm.springboot.dao.TagDao">
+
+    <!-- 删除标签 --><!-- 修改标签先删除标签，再进行添加标签，而不是在原标签基础上进行修改 -->
+    <update id="delTagsByAid" parameterType="Integer">
+        UPDATE `blog`.`tag`
+        SET `t_del` = 9
+        WHERE `a_tag` = #{aid};
+    </update>
+
+    <!-- 添加标签 -->
+    <insert id="addTagsByAid" parameterType="java.util.List" >
+        INSERT INTO `blog`.`tag`(`tag`, `t_del`, `a_tag`)
+        VALUES
+        <foreach collection="tags" item="t" index="index" separator=",">
+            (#{t.tag}, 1, #{t.aTag})
+        </foreach>
+    </insert>
+
+    <!-- 1. 根据 tid 删除标签 -->
+    <update id="delTagsByTid" parameterType="Integer">
+        UPDATE `blog`.`tag` `t`
+        SET `t`.`t_del` = 9
+        WHERE `t`.`tid` = #{tid}
+    </update>
+
+    <!-- 2. 根据 tid 修改标签 -->
+    <update id="updateTag" parameterType="Tag">
+        UPDATE `blog`.`tag` `t`
+        SET `t`.`tag` = #{tag}
+        WHERE `t`.`tid` = #{tid}
+    </update>
+
+    <!-- 3. 根据 tid 查询当前标签 -->
+    <select id="getTagByTid" parameterType="Integer" resultType="Tag" >
+        SELECT *
+        FROM `blog`.`tag` `t`
+        WHERE `t`.`tid` = #{tid}
+    </select>
+
+    <!-- 4. 查询所有标签 -->
+    <select id="getTags" parameterType="String" resultType="Tag">
+        SELECT *
+        FROM `blog`.`tag` `t`
+        WHERE 1 = 1
+        <if test="_parameter != null and _parameter != '' ">
+            AND `t`.`tag` LIKE '%${_parameter}%'
+        </if>
+    </select>
+
+</mapper>
