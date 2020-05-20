@@ -3,9 +3,9 @@ server:
 
 spring:
   datasource:
-    username: root
-    password: zsm-mysql
-    url: jdbc:mysql://localhost/blog?serverTimezone=GMT%2B8&useSSL=true&useUnicode=true&characterEncoding=utf8
+    username:   ########需修改########
+    password:   ########需修改########
+    url: jdbc:mysql://localhost/blog?serverTimezone=GMT%2B8&useSSL=true&useUnicode=true&characterEncoding=utf8  ########需修改########
     driver-class-name: com.mysql.cj.jdbc.Driver
     # 指定 Druid 数据源
     type: com.alibaba.druid.pool.DruidDataSource
@@ -39,8 +39,8 @@ spring:
   mail:
     default-encoding: UTF-8
     host: smtp.qq.com
-    username: 1097646307@qq.com
-    password: cjdxmutvxqckgaga
+    username: 邮箱名称  ########需修改########
+    password: 开启的服务密码  ########需修改########
     properties:
       mail:
         smtp:
@@ -63,12 +63,11 @@ pagehelper:
   support-methods-arguments: true
   params: count=countsql
   page-size-zero: false
-#  returnPageInfo: check
 
 jwt:
   config:
-    key: passbyzsm
-    ttl: 604800000
+    key: 密钥  ########需修改########
+    ttl: 604800000  ########需修改########
 
 # 自定义图片上传路径
 uploadpath:
