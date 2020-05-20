@@ -32,17 +32,6 @@
             <result property="aTag" column="a_tag"></result>
         </collection>
     </resultMap>
-    <!-- 查询所有文章(发布文章) --><!-- 查询用户自己发布的文章
-     SELECT `u`.`uid`, `u`.`unickname`,
-        `a`.`aid`, `a`.`title`, `a`.`summary`, `a`.`publish_date`,
-        `t`.`tid`, `t`.`tag`,
-        `c`.`cid`, `c`.`category`
-        FROM `blog`.`user` `u`
-        LEFT JOIN `blog`.`article` `a` ON `a`.`a_uid` = `u`.`uid`
-        LEFT JOIN `blog`.`tag` `t` ON `a`.`aid` = `t`.`a_tag`
-        LEFT JOIN `blog`.`category` `c` ON `a`.`a_category` = `c`.`cid`
-        默认必须添加 标签 和 类型
-    -->
 
     <select id="selectTags" resultType="Tag">
         SELECT `t`.`tid`, `t`.`tag`, `t`.`a_tag`
@@ -162,12 +151,7 @@
             <result property="category" column="category"></result>
         </collection>
     </resultMap>
-    <!-- SELECT `u`.*, `a`.*, `t`.*, `c`.*
-        FROM `blog`.`article` `a`
-        LEFT JOIN `blog`.`user` `u` ON `u`.`uid` = `a`.`a_uid`
-        LEFT JOIN `blog`.`tag` `t` ON `t`.`a_tag` = `a`.`aid`
-        LEFT JOIN `blog`.`category` `c` ON `c`.`cid` = `a`.`a_category`
-        -->
+    
     <select id="getArticleById" resultMap="getArticleByIdMap" parameterType="Integer">
         SELECT u.*, a.*, t.*, c.*
         FROM `blog`.`user` `u`, `blog`.`article` `a`, `blog`.`tag` `t`, `blog`.`category` `c`
@@ -179,11 +163,7 @@
         AND `a`.`a_category` = `c`.`cid`
         AND `a`.`a_uid` = `u`.`uid`
     </select>
-<!--    UPDATE `blog`.`article`
-SET `title` = '1', `summary` = 's', `md_content` = 's1',
-`html_content` = '1', `a_state` = 1, `create_date` = '1', `publish_date` = '1',
-`order_time` = 1, `adel_time` = '1', `adel` = 1, `a_uid` = 1, `a_category` = 1 WHERE `aid` = 1;
--->
+
     <!-- 根据文章id修改当前文章 -->
     <update id="updateArticleById" parameterType="Article" >
         UPDATE `blog`.`article`
